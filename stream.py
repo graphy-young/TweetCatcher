@@ -36,23 +36,32 @@ keywords_list = input('검색할 키워드를 입력하세요. 최대 400개 키
 for keyword in keywords_list : keywords_list[keywords_list.index(keyword)] = keyword.strip() # remove left and right side space for each keyword
 
 for keyword in keywords_list:
-    query = '''CREATE TABLE IF NOT EXISTS `biocity`.`keyword_%s` (
+    query = 'CREATE TABLE IF NOT EXISTS `%s`.' % keys.mysql_database + '''`keyword_%s` (
                 username VARCHAR(15) NOT NULL,
                 uploaded_time DATETIME NOT NULL,
                 content TEXT NOT NULL,
                 place VARCHAR(50) DEFAULT NULL,
-                latitude DECIMAL(5,2) DEFAULT NULL,
-                longtitude DECIMAL(5,2) DEFAULT NULL
+                latitude DECIMAL(10,7) DEFAULT NULL,
+                longtitude DECIMAL(10,7) DEFAULT NULL
             );''' % keyword
     cursor.execute(query)
+
 # 키워드 예외를 적용할 예외 테이블 생성
-query = '''CREATE TABLE IF NOT EXISTS `biocity`.`keyword_exception` (
+query = 'CREATE TABLE IF NOT EXISTS `%s`.' % keys.mysql_database + '''`exception` (
             username VARCHAR(15) NOT NULL,
             uploaded_time DATETIME NOT NULL,
             content TEXT NOT NULL,
             place VARCHAR(50) DEFAULT NULL,
-            latitude DECIMAL(5,2) DEFAULT NULL,
-            longtitude DECIMAL(5,2) DEFAULT NULL
+            latitude DECIMAL(10,7) DEFAULT NULL,
+            longtitude DECIMAL(10,7) DEFAULT NULL
+        );'''
+cursor.execute(query)
+
+# 로그 테이블 생성
+query = 'CREATE TABLE IF NOT EXISTS `%s`.' % keys.mysql_database + '''`log` (
+            time DATETIME NOT NULL,
+            error TEXT NOT NULL,
+            etc TEXT DEFAULT NULL
         );'''
 cursor.execute(query)
 
@@ -85,14 +94,20 @@ class TwitterStreamListener(tweepy.StreamListener):
             keyword = ''
             contain_keywords = []
             for keyword_candidate in keywords_list:
-                if keyword_candidate.lower in str(tweet).lower: contain_keywords.append(keyword_candidate)
-            if len(contain_keywords) == 0: contain_keywords.append('exception')
-            for keyword in contain_keywords:
-                query = ''' INSERT INTO `keyword_%s`(username, uploaded_time, content, place, latitude, longtitude) ''' % keyword + '''
-                VALUES (%s, %s, %s, %s, %s, %s);'''
+                if keyword_candidate.lower() in str(tweet).lower(): contain_keywords.append(keyword_candidate)
+            if len(contain_keywords) == 0:
+                query = '''INSERT INTO `exception`(username, uploaded_time, content, place, latitude, longtitude)
+                    VALUES (%s, %s, %s, %s, %s, %s);'''
                 values = (username, uploaded_time, content, place, latitude, longtitude)
                 cursor.execute(query, values)
                 mysql.commit()
+            else: 
+                for keyword in contain_keywords:
+                    query = '''INSERT INTO `keyword_%s`(username, uploaded_time, content, place, latitude, longtitude) ''' % keyword + '''
+                    VALUES (%s, %s, %s, %s, %s, %s);'''
+                    values = (username, uploaded_time, content, place, latitude, longtitude)
+                    cursor.execute(query, values)
+                    mysql.commit()
 
         print('\nKeyword :', contain_keywords, 
         '\nUsername :', username, 
@@ -100,8 +115,6 @@ class TwitterStreamListener(tweepy.StreamListener):
         '\nContent :', content, 
         '\nWhere :', place, 
         '\nGeo :', latitude, longtitude, '\n')
-
-        # 여기다 데이터베이스 입력 코드 넣기
 
         self.counter += 1
         print(self.counter, 'tweet(s) captured successfully.\n')
@@ -115,6 +128,13 @@ while True:
         TwitterStreamListener = TwitterStreamListener()
         TweetStream = tweepy.Stream(auth = api.auth, listener=TwitterStreamListener)
         TweetStream.filter(track=keywords_list, is_async=True)
-    except:
-        print("[WARNING]", datetime.datetime.now(), "error occured")
-        time.sleep(15 * 60)
+    except Exception as e:
+        current_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        print("[WARNING]", current_time, "error occured")
+        print(e)
+        query = '''INSERT INTO `exception`(time, error, etc) VALUES (%s, %s, %s);'''
+        values = (current_time, str(e), '')
+        cursor.execute(query, values)
+        mysql.commit()
+        #time.sleep(15 * 60)
+        time.sleep(60)
