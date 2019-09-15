@@ -1,5 +1,5 @@
 # TweetCatcher
-Filter tweets containing keywords using Python tweepy library, Then save to MySQL Server
+Filter tweets containing keywords using Python tweepy library, then save those diving with each keyword to MySQL Server
 
 # Requirements
 1. Python 3.x (based on 3.6.1)
