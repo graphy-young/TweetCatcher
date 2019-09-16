@@ -76,48 +76,83 @@ class TwitterStreamListener(tweepy.StreamListener):
 
     def on_data(self, data):
         tweet = json.loads(data)
-        
-        ### Tweet data
-        username = tweet['user']['screen_name'] # @'username'
-        #timestamp = tweet['created_at'] # 'Wed Sep 11 16:14:04 +0000 2019', this is original timestamp based on UTC+0
-        uploaded_time = (parse(tweet['created_at']) + datetime.timedelta(hours=9)).strftime('%Y-%m-%d %H:%M:%S')
-        content = deEmoji(tweet['text']) # Tweet's content (not include media)
-        if tweet['geo'] is not None: # When the tweet doesn't include user's location value
-            latitude = tweet['geo']['coordinates'][0] # latitude (위도)
-            longtitude = tweet['geo']['coordinates'][1] # longtitude (경도)
-        else: latitude = longtitude = None
-        if tweet['place'] is not None: # If user doen't tag any location in tweet
-            place = tweet['place']['full_name'] # name of tagged places
-        else: place = None
-        if len(keywords_list) == 1: contain_keywords = keywords_list
-        else:
-            keyword = ''
-            contain_keywords = []
-            for keyword_candidate in keywords_list:
-                if keyword_candidate.lower() in str(tweet).lower(): contain_keywords.append(keyword_candidate)
-            if len(contain_keywords) == 0:
-                query = '''INSERT INTO `exception`(username, uploaded_time, content, place, latitude, longtitude)
-                    VALUES (%s, %s, %s, %s, %s, %s);'''
-                values = (username, uploaded_time, content, place, latitude, longtitude)
-                cursor.execute(query, values)
-                mysql.commit()
-            else: 
-                for keyword in contain_keywords:
-                    query = '''INSERT INTO `keyword_%s`(username, uploaded_time, content, place, latitude, longtitude) ''' % keyword + '''
-                    VALUES (%s, %s, %s, %s, %s, %s);'''
+        try:
+            ### Tweet data
+            username = tweet['user']['screen_name'] # @'username'
+            #timestamp = tweet['created_at'] # 'Wed Sep 11 16:14:04 +0000 2019', this is original timestamp based on UTC+0
+            uploaded_time = (parse(tweet['created_at']) + datetime.timedelta(hours=9)).strftime('%Y-%m-%d %H:%M:%S')
+            content = deEmoji(tweet['text']) # Tweet's content (not include media)
+            if tweet['geo'] is not None: # When the tweet doesn't include user's location value
+                latitude = tweet['geo']['coordinates'][0] # latitude (위도)
+                longtitude = tweet['geo']['coordinates'][1] # longtitude (경도)
+            else: latitude = longtitude = None
+            if tweet['place'] is not None: # If user doen't tag any location in tweet
+                place = tweet['place']['full_name'] # name of tagged places
+            else: place = None
+            if len(keywords_list) == 1: contain_keywords = keywords_list
+            else:
+                keyword = ''
+                contain_keywords = []
+                for keyword_candidate in keywords_list:
+                    if keyword_candidate.lower() in str(tweet).lower(): contain_keywords.append(keyword_candidate)
+                if len(contain_keywords) == 0:
+                    query = '''INSERT INTO `exception`(username, uploaded_time, content, place, latitude, longtitude)
+                        VALUES (%s, %s, %s, %s, %s, %s);'''
                     values = (username, uploaded_time, content, place, latitude, longtitude)
                     cursor.execute(query, values)
                     mysql.commit()
+                else: 
+                    for keyword in contain_keywords:
+                        query = '''INSERT INTO `keyword_%s`(username, uploaded_time, content, place, latitude, longtitude) ''' % keyword + '''
+                        VALUES (%s, %s, %s, %s, %s, %s);'''
+                        values = (username, uploaded_time, content, place, latitude, longtitude)
+                        cursor.execute(query, values)
+                        mysql.commit()
+                ### Tweet data
+                username = tweet['user']['screen_name'] # @'username'
+                #timestamp = tweet['created_at'] # 'Wed Sep 11 16:14:04 +0000 2019', this is original timestamp based on UTC+0
+                uploaded_time = (parse(tweet['created_at']) + datetime.timedelta(hours=9)).strftime('%Y-%m-%d %H:%M:%S')
+                content = deEmoji(tweet['text']) # Tweet's content (not include media)
+                if tweet['geo'] is not None: # When the tweet doesn't include user's location value
+                    latitude = tweet['geo']['coordinates'][0] # latitude (위도)
+                    longtitude = tweet['geo']['coordinates'][1] # longtitude (경도)
+                else: latitude = longtitude = None
+                if tweet['place'] is not None: # If user doen't tag any location in tweet
+                    place = tweet['place']['full_name'] # name of tagged places
+                else: place = None
+                if len(keywords_list) == 1: contain_keywords = keywords_list
+                else:
+                    keyword = ''
+                    contain_keywords = []
+                    for keyword_candidate in keywords_list:
+                        if keyword_candidate.lower() in str(tweet).lower(): contain_keywords.append(keyword_candidate)
+                    if len(contain_keywords) == 0:
+                        query = '''INSERT INTO `exception`(username, uploaded_time, content, place, latitude, longtitude)
+                            VALUES (%s, %s, %s, %s, %s, %s);'''
+                        values = (username, uploaded_time, content, place, latitude, longtitude)
+                        cursor.execute(query, values)
+                        mysql.commit()
+                    else: 
+                        for keyword in contain_keywords:
+                            query = '''INSERT INTO `keyword_%s`(username, uploaded_time, content, place, latitude, longtitude) ''' % keyword + '''
+                            VALUES (%s, %s, %s, %s, %s, %s);'''
+                            values = (username, uploaded_time, content, place, latitude, longtitude)
+                            cursor.execute(query, values)
+                            mysql.commit()
 
-        print('\nKeyword :', contain_keywords, 
-        '\nUsername :', username, 
-        '\nTimestamp :', uploaded_time, 
-        '\nContent :', content, 
-        '\nWhere :', place, 
-        '\nGeo :', latitude, longtitude, '\n')
+                print('\nKeyword :', contain_keywords, 
+                '\nUsername :', username, 
+                '\nTimestamp :', uploaded_time, 
+                '\nContent :', content, 
+                '\nWhere :', place, 
+                '\nGeo :', latitude, longtitude, '\n')
 
-        self.counter += 1
-        print(self.counter, 'tweet(s) captured successfully.\n')
+                self.counter += 1
+                print(self.counter, 'tweet(s) captured successfully.\n')
+                
+        except Exception as e:
+            print(e)
+            pass
 
     def on_error(self, status_code):
         print(status_code)
