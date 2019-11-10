@@ -167,7 +167,7 @@ while True:
         current_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         print("[WARNING]", current_time, "error occured")
         print(e)
-        query = '''INSERT INTO `exception`(time, error, etc) VALUES (%s, %s, %s);'''
+        query = '''INSERT INTO `exception`(current_time, error, etc) VALUES (%s, %s, %s);'''
         values = (current_time, str(e), '')
         cursor.execute(query, values)
         mysql.commit()
